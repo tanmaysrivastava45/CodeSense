@@ -1,9 +1,15 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../config/supabaseClient';
 
 const AuthContext = createContext({});
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -12,25 +18,45 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log('Auth event:', event);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setLoading(false);
 
-    return () => subscription.unsubscribe();
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setSession(null);
+        }
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const value = {
     user,
     session,
-    loading
+    loading,
+    signOut: () => supabase.auth.signOut()
   };
 
   return (

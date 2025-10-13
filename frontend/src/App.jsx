@@ -1,11 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext.jsx';
-import Navbar from './components/Navbar.jsx';
-import Home from './pages/Home.jsx';
-import Login from './pages/Login.jsx';
-import Register from './pages/Register.jsx';
-import ForgotPassword from './pages/ForgotPassword.jsx';
-import ResetPassword from './pages/ResetPassword.jsx';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { CollaborationProvider } from './context/CollaborationContext';
+import Navbar from './components/Navbar';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import CollaborationRoom from './pages/CollaborationRoom';
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -63,6 +65,12 @@ const AppContent = () => {
           </ProtectedRoute>
         } />
         
+        <Route path="/collaborate/:roomId" element={
+          <ProtectedRoute>
+            <CollaborationRoom />
+          </ProtectedRoute>
+        } />
+        
         <Route path="*" element={<Navigate to="/register" />} />
       </Routes>
     </>
@@ -73,9 +81,11 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen bg-slate-950">
-          <AppContent />
-        </div>
+        <CollaborationProvider>
+          <div className="min-h-screen bg-slate-950">
+            <AppContent />
+          </div>
+        </CollaborationProvider>
       </AuthProvider>
     </Router>
   );

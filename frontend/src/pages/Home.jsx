@@ -9,12 +9,13 @@ import {
   Download, Clock, Database, 
   Lightbulb, FileText, Trash2, X, Menu, Sparkles, AlertTriangle
 } from 'lucide-react';
+import CollaborationHub from '../components/CollaborationHub';
 
 const Home = () => {
-  const { user, session } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [code, setCode] = useState('');
-  const [language, setLanguage] = useState('C++');
+  const [language, setLanguage] = useState('javascript');
   const [results, setResults] = useState({
     problemName: '',
     timeComplexity: '',
@@ -36,28 +37,38 @@ const Home = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    // Only load history when both user and session are available
+    if (user && session?.access_token) {
       loadHistory();
     }
-  }, [user]);
+  }, [user, session]);
 
   const loadHistory = async () => {
-    if (!user || !session) return;
+    if (!user || !session?.access_token) {
+      console.log('Session not ready yet...');
+      return;
+    }
     
     try {
       const API_URL = import.meta.env.VITE_API_URL;
       const response = await axios.get(`${API_URL}/analysis/history`, {
-        headers: { Authorization: `Bearer ${session.access_token}` }
+        headers: { 
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
       });
       setHistory(response.data.history || []);
     } catch (error) {
       console.error('Load history error:', error);
+      if (error.response?.status === 401) {
+        console.log('Session expired or invalid');
+      }
     }
   };
 
   const handleAnalyzeAll = async () => {
     if (!user) {
-      navigate('/register');  
+      navigate('/register');
       return;
     }
 
@@ -89,9 +100,9 @@ const Home = () => {
 
   const handleIndividualAnalysis = async (type) => {
     if (!user) {
-    navigate('/register');  
-    return;
-  }
+      navigate('/register');
+      return;
+    }
 
     if (!code.trim()) {
       alert('Please enter some code to analyze');
@@ -190,7 +201,7 @@ const Home = () => {
     setCode(item.code);
     setResults({
       problemName: item.problem_name,
-      syntaxErrors: item.syntax_errors || '', 
+      syntaxErrors: item.syntax_errors || '',
       timeComplexity: item.time_complexity || '',
       spaceComplexity: item.space_complexity || '',
       explanation: item.explanation || '',
@@ -200,12 +211,24 @@ const Home = () => {
     setShowHistory(false);
   };
 
+  // Show loading state while auth initializes
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-cyan-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   const hasResults = results.timeComplexity || results.spaceComplexity || results.explanation || results.improvements || results.syntaxErrors;
 
   return (
     <div className="min-h-screen pt-20 pb-8">
       <div className="container mx-auto px-4 py-8 flex gap-6">
-        {/* Left Sidebar */}
+        {/* Left Sidebar - Analysis Options */}
         <aside className={`${
           sidebarOpen ? 'fixed inset-0 z-50 bg-black/50' : 'hidden'
         } lg:block lg:relative lg:bg-transparent`}>
@@ -290,10 +313,10 @@ const Home = () => {
                 onChange={(e) => setLanguage(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-900/50 text-white border border-cyan-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
               >
-                <option value="cpp">C++</option>
                 <option value="javascript">JavaScript</option>
                 <option value="python">Python</option>
                 <option value="java">Java</option>
+                <option value="cpp">C++</option>
                 <option value="csharp">C#</option>
                 <option value="go">Go</option>
                 <option value="rust">Rust</option>
@@ -317,13 +340,18 @@ const Home = () => {
 
         {/* Main Content */}
         <main className="flex-1 space-y-6 min-w-0">
+          {/* Mobile menu button */}
           <button 
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden fixed bottom-6 right-6 z-40 p-4 gradient-primary text-white rounded-full shadow-xl"
+            className="lg:hidden fixed bottom-6 left-6 z-40 p-4 gradient-primary text-white rounded-full shadow-xl"
           >
             <Menu size={24} />
           </button>
 
+          {/* Collaboration Hub - Prominent Feature */}
+          <CollaborationHub />
+
+          {/* Code Input */}
           <div className="glass-effect rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-white">Enter Your Code</h2>
@@ -342,8 +370,10 @@ const Home = () => {
             />
           </div>
 
+          {/* Results */}
           {hasResults && (
             <div className="space-y-6">
+              {/* Problem Name Header */}
               {results.problemName && (
                 <div className="gradient-primary rounded-xl p-6 shadow-xl">
                   <h2 className="text-2xl font-bold text-white">{results.problemName}</h2>
@@ -351,6 +381,7 @@ const Home = () => {
                 </div>
               )}
 
+              {/* Syntax Errors */}
               {results.syntaxErrors && (
                 <div className="glass-effect rounded-xl p-6 border border-red-500/30">
                   <div className="flex items-center gap-2 mb-4">
@@ -365,6 +396,7 @@ const Home = () => {
                 </div>
               )}
 
+              {/* Time Complexity */}
               {results.timeComplexity && (
                 <div className="glass-effect rounded-xl p-6 border border-cyan-500/30">
                   <div className="flex items-center gap-2 mb-4">
@@ -379,6 +411,7 @@ const Home = () => {
                 </div>
               )}
 
+              {/* Space Complexity */}
               {results.spaceComplexity && (
                 <div className="glass-effect rounded-xl p-6 border border-blue-500/30">
                   <div className="flex items-center gap-2 mb-4">
@@ -393,6 +426,7 @@ const Home = () => {
                 </div>
               )}
 
+              {/* Explanation */}
               {results.explanation && (
                 <div className="glass-effect rounded-xl p-6 border border-green-500/30">
                   <div className="flex items-center gap-2 mb-4">
@@ -407,6 +441,7 @@ const Home = () => {
                 </div>
               )}
 
+              {/* Improvements */}
               {results.improvements && (
                 <div className="glass-effect rounded-xl p-6 border border-amber-500/30">
                   <div className="flex items-center gap-2 mb-4">
@@ -465,7 +500,7 @@ const Home = () => {
         )}
       </div>
 
-      {/* Mobile History */}
+      {/* Mobile History Modal */}
       {showHistory && (
         <div className="md:hidden fixed inset-0 z-50 bg-black/80 flex items-end">
           <div className="w-full bg-slate-900 rounded-t-2xl p-6 max-h-[70vh] overflow-y-auto">
