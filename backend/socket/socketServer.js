@@ -8,12 +8,22 @@ const rooms = new Map();
 const userSockets = new Map();
 
 export const initializeSocket = (server) => {
+  // CORS Configuration for Socket.io
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://code-sense-mu.vercel.app', // Your Vercel deployment
+    process.env.FRONTEND_URL
+  ].filter(Boolean);
+
   io = new Server(server, {
     cors: {
-      origin: process.env.FRONTEND_URL,
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true
-    }
+    },
+    transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+    allowEIO3: true
   });
 
   io.on('connection', (socket) => {
@@ -97,16 +107,6 @@ export const initializeSocket = (server) => {
           selection
         });
       }
-    });
-
-    socket.on('send-message', ({ roomId, message, userName, userId }) => {
-      const timestamp = Date.now();
-      io.to(roomId).emit('new-message', {
-        message,
-        userName,
-        userId,
-        timestamp
-      });
     });
 
     socket.on('analysis-started', ({ roomId, analysisType }) => {
