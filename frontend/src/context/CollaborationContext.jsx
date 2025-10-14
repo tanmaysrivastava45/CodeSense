@@ -17,7 +17,7 @@ export const CollaborationProvider = ({ children }) => {
   useEffect(() => {
     if (!user) return;
 
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
     const newSocket = io(SOCKET_URL, {
       autoConnect: true,
       reconnection: true,
