@@ -1,32 +1,13 @@
 import { useState } from 'react';
-import { supabase } from '../config/supabaseClient';
 import { Mail, CheckCircle } from 'lucide-react';
 
 const ResendVerification = ({ email }) => {
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
 
   const handleResendVerification = async () => {
-    setLoading(true);
-    setError('');
-    setSuccess(false);
-
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email,
-      });
-
-      if (error) throw error;
-      
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 5000);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
+    // TODO: Implement resend verification with backend
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 5000);
   };
 
   return (

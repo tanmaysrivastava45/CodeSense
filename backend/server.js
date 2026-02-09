@@ -2,6 +2,9 @@ import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { connectDB } from './config/mongodb.js';
+import { initializeJWTSecret } from './utils/secretManager.js';
+
 
 // Import routes with error handling
 let authRoutes, analysisRoutes, collaborationRoutes, initializeSocket;
@@ -38,7 +41,9 @@ try {
   console.error('❌ Failed to load socket module:', error.message);
 }
 
-dotenv.config();
+dotenv.config({ path: '../.env' });
+initializeJWTSecret();
+await connectDB();
 
 const app = express();
 const httpServer = createServer(app);

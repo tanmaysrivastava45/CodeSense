@@ -6,14 +6,15 @@ import {
   getAnalysisStats,
   analyzeAllAtOnce
 } from '../controllers/analysisController.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticateToken  } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/analyze', authenticate, analyzeCode);
-router.post('/analyze-all', authenticate, analyzeAllAtOnce);
-router.get('/history', authenticate, getHistory);
-router.get('/stats', authenticate, getAnalysisStats);
-router.delete('/:id', authenticate, deleteAnalysis);
+router.post('/analyze', authenticateToken, analyzeCode);
+router.post('/analyze-all', authenticateToken, analyzeAllAtOnce);
+router.get('/history', authenticateToken, getHistory);
+router.get('/stats', authenticateToken, getAnalysisStats);
+router.delete('/:id', authenticateToken, deleteAnalysis);
+
 
 export default router;

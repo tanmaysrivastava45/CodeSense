@@ -1,20 +1,19 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabaseClient';
 import { Code, LogOut, User, Zap } from 'lucide-react';
 
 const Navbar = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/register');
+    await logout();
+    navigate('/login');
   };
 
   const getUserName = () => {
-    if (user?.user_metadata?.name) {
-      return user.user_metadata.name;
+    if (user?.name) {
+      return user.name;
     }
     if (user?.email) {
       return user.email.split('@')[0];

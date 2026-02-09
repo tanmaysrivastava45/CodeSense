@@ -12,7 +12,7 @@ import {
 import CollaborationHub from '../components/CollaborationHub';
 
 const Home = () => {
-  const { user, session, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('javascript');
@@ -37,15 +37,21 @@ const Home = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Only load history when both user and session are available
-    if (user && session?.access_token) {
+    // Redirect to login if not authenticated
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    // Load history when user is available
+    if (user && token) {
       loadHistory();
     }
-  }, [user, session]);
+  }, [user, token, authLoading, isAuthenticated, navigate]);
 
   const loadHistory = async () => {
-    if (!user || !session?.access_token) {
-      console.log('Session not ready yet...');
+    if (!token) {
+      console.log('Token not available');
       return;
     }
     
@@ -53,7 +59,7 @@ const Home = () => {
       const API_URL = import.meta.env.VITE_API_URL;
       const response = await axios.get(`${API_URL}/analysis/history`, {
         headers: { 
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -84,7 +90,7 @@ const Home = () => {
       const response = await axios.post(
         `${API_URL}/analysis/analyze-all`,
         { code, language },
-        { headers: { Authorization: `Bearer ${session.access_token}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setResults(response.data.results);
@@ -124,7 +130,7 @@ const Home = () => {
       const response = await axios.post(
         `${API_URL}/analysis/analyze`,
         { code, language, analysisType: type },
-        { headers: { Authorization: `Bearer ${session.access_token}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setResults(prev => ({
@@ -189,7 +195,7 @@ const Home = () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL;
       await axios.delete(`${API_URL}/analysis/${id}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setHistory(history.filter(item => item.id !== id));
     } catch (error) {

@@ -152,7 +152,8 @@
 // ... existing imports
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../config/supabaseClient';
+import { apiClient } from '../config/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 import { Code, Mail, Lock, ArrowRight, Sparkles } from 'lucide-react';
 
 const Login = () => {
@@ -161,6 +162,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -168,15 +170,23 @@ const Login = () => {
     setError('');
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const response = await apiClient.auth.login(email, password);
+      
+      if (response.error) {
+        setError(response.error);
+        return;
+      }
 
-      if (error) throw error;
+      if (!response.token) {
+        setError('No token received from server');
+        return;
+      }
+
+      // Store token and user info
+      login(response.token, response.sessionId, response.user);
       navigate('/home');
     } catch (error) {
-      setError(error.message);
+      setError(error.message || 'Login failed');
     } finally {
       setLoading(false);
     }

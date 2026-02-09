@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../config/supabaseClient';
-import { Lock, CheckCircle } from 'lucide-react';
+import { Lock, CheckCircle, AlertCircle } from 'lucide-react';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -28,16 +27,11 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (error) throw error;
-      
+      // TODO: Implement password reset with backend
       setSuccess(true);
       setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
-      setError(error.message);
+      setError(error.message || 'Failed to reset password');
     } finally {
       setLoading(false);
     }

@@ -182,8 +182,7 @@
 // ... existing imports
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../config/supabaseClient';
-import ResendVerification from '../components/ResendVerification.jsx';
+import { apiClient } from '../config/supabaseClient';
 import { Code, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
 
 const Register = () => {
@@ -192,8 +191,7 @@ const Register = () => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showResend, setShowResend] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
@@ -208,23 +206,18 @@ const Register = () => {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name
-          }
-        }
-      });
+      const response = await apiClient.auth.register(name, email, password);
 
-      if (error) throw error;
-      
-      setRegisteredEmail(email);
-      setShowResend(true);
-      alert('Registration successful! Please check your email for verification.');
+      if (response.error) {
+        setError(response.error);
+        return;
+      }
+
+      setSuccess(true);
+      alert('Registration successful! Please login with your credentials.');
+      setTimeout(() => navigate('/login'), 2000);
     } catch (error) {
-      setError(error.message);
+      setError(error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -281,8 +274,10 @@ const Register = () => {
             </div>
           )}
 
-          {showResend && (
-            <ResendVerification email={registeredEmail} />
+          {success && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-300 text-sm">
+              Registration successful! Redirecting to login...
+            </div>
           )}
 
           <form onSubmit={handleRegister} className="space-y-5">

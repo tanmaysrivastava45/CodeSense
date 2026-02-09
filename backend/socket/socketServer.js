@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
-import { supabase } from '../config/supabase.js';
+import { CollaborationLog } from '../model/CollaborationLog.js';
+import mongoose from 'mongoose';
 
 let io;
 
@@ -8,11 +9,10 @@ const rooms = new Map();
 const userSockets = new Map();
 
 export const initializeSocket = (server) => {
-  // CORS Configuration for Socket.io
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://code-sense-mu.vercel.app', // Your Vercel deployment
+    'https://code-sense-mu.vercel.app',
     process.env.FRONTEND_URL
   ].filter(Boolean);
 
@@ -22,7 +22,7 @@ export const initializeSocket = (server) => {
       methods: ['GET', 'POST'],
       credentials: true
     },
-    transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+    transports: ['websocket', 'polling'],
     allowEIO3: true
   });
 
@@ -33,7 +33,7 @@ export const initializeSocket = (server) => {
     socket.on('join-room', async ({ roomId, userId, userName }) => {
       try {
         socket.join(roomId);
-        
+
         if (!rooms.has(roomId)) {
           rooms.set(roomId, {
             code: '',
@@ -45,7 +45,7 @@ export const initializeSocket = (server) => {
         }
 
         const room = rooms.get(roomId);
-        
+
         room.users.set(socket.id, {
           userId,
           userName,
@@ -55,6 +55,7 @@ export const initializeSocket = (server) => {
 
         userSockets.set(userId, socket.id);
 
+        // Emit current state
         socket.emit('room-state', {
           code: room.code,
           language: room.language,
@@ -81,6 +82,7 @@ export const initializeSocket = (server) => {
       }
     });
 
+    // Code change
     socket.on('code-change', ({ roomId, code, userId }) => {
       const room = rooms.get(roomId);
       if (room) {
@@ -89,6 +91,7 @@ export const initializeSocket = (server) => {
       }
     });
 
+    // Language change
     socket.on('language-change', ({ roomId, language }) => {
       const room = rooms.get(roomId);
       if (room) {
@@ -97,6 +100,7 @@ export const initializeSocket = (server) => {
       }
     });
 
+    // Cursor move
     socket.on('cursor-move', ({ roomId, position, selection }) => {
       const room = rooms.get(roomId);
       if (room) {
@@ -109,20 +113,22 @@ export const initializeSocket = (server) => {
       }
     });
 
+    // Analysis started
     socket.on('analysis-started', ({ roomId, analysisType }) => {
-      socket.to(roomId).emit('user-analyzing', { 
+      socket.to(roomId).emit('user-analyzing', {
         socketId: socket.id,
-        analysisType 
+        analysisType
       });
     });
 
+    // Leave room
     socket.on('leave-room', async ({ roomId, userId }) => {
       await handleUserLeave(socket, roomId, userId);
     });
 
+    // Disconnect
     socket.on('disconnect', async () => {
       console.log(`❌ User disconnected: ${socket.id}`);
-      
       for (const [roomId, room] of rooms.entries()) {
         if (room.users.has(socket.id)) {
           const user = room.users.get(socket.id);
@@ -135,11 +141,12 @@ export const initializeSocket = (server) => {
   return io;
 };
 
+// Handle user leaving
 const handleUserLeave = async (socket, roomId, userId) => {
   const room = rooms.get(roomId);
   if (room && room.users.has(socket.id)) {
     const user = room.users.get(socket.id);
-    
+
     room.users.delete(socket.id);
     room.cursors.delete(socket.id);
     userSockets.delete(userId);
@@ -160,21 +167,19 @@ const handleUserLeave = async (socket, roomId, userId) => {
 
     socket.leave(roomId);
     await saveRoomActivity(roomId, userId, 'left');
-    
+
     console.log(`👋 ${user.userName} left room ${roomId}`);
   }
 };
 
+// Save activity to MongoDB
 const saveRoomActivity = async (roomId, userId, action) => {
   try {
-    await supabase
-      .from('collaboration_logs')
-      .insert({
-        room_id: roomId,
-        user_id: userId,
-        action,
-        timestamp: new Date().toISOString()
-      });
+    await CollaborationLog.create({
+      roomId,
+      userId: mongoose.Types.ObjectId(userId),
+      action,
+    });
   } catch (error) {
     console.error('Save activity error:', error);
   }

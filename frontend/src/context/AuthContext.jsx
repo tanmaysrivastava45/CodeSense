@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../config/supabaseClient';
+import { apiClient } from '../config/supabaseClient';
 
 const AuthContext = createContext({});
 
@@ -13,50 +13,75 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
+  const [token, setToken] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Get token and user from localStorage on mount
     const initializeAuth = async () => {
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        const storedToken = localStorage.getItem('jwtToken');
+        const storedSessionId = localStorage.getItem('sessionId');
+        
+        if (storedToken) {
+          // Verify token is still valid by fetching profile
+          const response = await apiClient.auth.getProfile(storedToken);
+          
+          if (response.user) {
+            setToken(storedToken);
+            setSessionId(storedSessionId);
+            setUser(response.user);
+          } else {
+            // Token is invalid, clear storage
+            localStorage.removeItem('jwtToken');
+            localStorage.removeItem('sessionId');
+          }
+        }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('sessionId');
       } finally {
         setLoading(false);
       }
     };
 
     initializeAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log('Auth event:', event);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setLoading(false);
-
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setSession(null);
-        }
-      }
-    );
-
-    return () => {
-      subscription?.unsubscribe();
-    };
   }, []);
+
+  const login = (jwtToken, sessionId, userData) => {
+    localStorage.setItem('jwtToken', jwtToken);
+    localStorage.setItem('sessionId', sessionId);
+    setToken(jwtToken);
+    setSessionId(sessionId);
+    setUser(userData);
+  };
+
+  const logout = async () => {
+    try {
+      if (token) {
+        await apiClient.auth.logout(token);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('jwtToken');
+      localStorage.removeItem('sessionId');
+      setToken(null);
+      setSessionId(null);
+      setUser(null);
+    }
+  };
 
   const value = {
     user,
-    session,
+    token,
+    sessionId,
     loading,
-    signOut: () => supabase.auth.signOut()
+    login,
+    logout,
+    isAuthenticated: !!token
   };
 
   return (

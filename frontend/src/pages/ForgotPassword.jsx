@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../config/supabaseClient';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 
 const ForgotPassword = () => {
@@ -16,12 +15,8 @@ const ForgotPassword = () => {
     setSuccess(false);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) throw error;
-      
+      // TODO: Implement password reset with backend
+      // For now, just show a message
       setSuccess(true);
     } catch (error) {
       setError(error.message);
