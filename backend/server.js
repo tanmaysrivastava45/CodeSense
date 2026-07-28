@@ -4,15 +4,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 // Import routes with error handling
-let authRoutes, analysisRoutes, collaborationRoutes, initializeSocket;
+let analysisRoutes, collaborationRoutes, initializeSocket;
 
-try {
-  const authModule = await import('./routes/auth.js');
-  authRoutes = authModule.default;
-  console.log('✅ Auth routes loaded');
-} catch (error) {
-  console.error('❌ Failed to load auth routes:', error.message);
-}
+
 
 try {
   const analysisModule = await import('./routes/analysis.js');
@@ -97,12 +91,6 @@ app.get('/api', (req, res) => {
 });
 
 // Register API routes
-if (authRoutes) {
-  app.use('/api/auth', authRoutes);
-  console.log('✅ Auth routes registered at /api/auth');
-} else {
-  console.error('❌ Auth routes not registered');
-}
 
 if (analysisRoutes) {
   app.use('/api/analysis', analysisRoutes);
@@ -126,8 +114,7 @@ app.use((req, res) => {
     availableRoutes: [
       'GET /',
       'GET /api',
-      'POST /api/auth/register',
-      'POST /api/auth/login',
+
       'POST /api/analysis/analyze',
       'POST /api/analysis/analyze-all',
       'GET /api/analysis/history'
