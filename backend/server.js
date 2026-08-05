@@ -72,6 +72,11 @@ if (initializeSocket) {
   }
 }
 
+// Loader.io verification route
+app.get('/loaderio-1f82f886d4dab773f6b90884d98c4f63*', (req, res) => {
+  res.send('loaderio-1f82f886d4dab773f6b90884d98c4f63');
+});
+
 // Root route
 app.get('/', (req, res) => {
   res.json({ 
